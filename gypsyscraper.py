@@ -13,14 +13,21 @@ STARTING_URL='https://www.comune.rivadelgarda.tn.it/Aree-tematiche/Edilizia-e-Ur
 STARTING_PATH="scraped"
 # included path for files that are linked outside 
 INCLUDE=['content',]
+# strings to remove from destination folder names (usually pagination stuffs)
+REMOVE_FROM_FOLDERNAME=['(offset)',]
 
-def is_external(url, base_url):
-    if(DEBUG):print(f"Skip as external {base_url} {url}")
-    return urlparse(url).netloc and urlparse(url).netloc != urlparse(base_url).netloc
+def is_external(url):
+    res = urlparse(url).netloc and urlparse(url).netloc != urlparse(STARTING_URL).netloc
+    if res and DEBUG: print(f"Skip as external {url}")
+    return res
 
-def is_parent_link(link, base_url):
-    if(DEBUG):print(f"Skip as parent {base_url} {link}")    
-    return urlparse(link).path.count('/') <= urlparse(base_url).path.count('/')
+def is_parent_link(url):
+
+    res = not (STARTING_URL in url)
+    if res and DEBUG:print(f"Skip as parent {url}")    
+    #return urlparse(link).path.count('/') <= urlparse(base_url).path.count('/')
+    
+    return res
 
 def is_included(url,include):
     for item in include:
@@ -40,6 +47,10 @@ def download_file(url,base_url):
 
 
     dest_path = os.path.join(STARTING_PATH,dir)
+
+    for remove in REMOVE_FROM_FOLDERNAME:
+        dest_path.replace(remove,'')
+
     os.makedirs(dest_path, exist_ok=True)
 
     dest_path = os.path.join(dest_path,local_filename)
@@ -72,7 +83,7 @@ def scrape_links(base_url, depth=0, max_depth=3,include_urls=['']):
         full_url = urljoin(base_url, href)
         
         # Skip external and parent links
-        if( is_external(full_url, base_url) or is_parent_link(full_url, base_url) and not is_included(full_url, include_urls) ) :
+        if( is_external(full_url) or is_parent_link(full_url) and not is_included(full_url, include_urls) ) :
             continue
 
         if href.endswith(('.pdf', '.zip', '.jpg', '.png', '.txt', '.docx', '.xlsx')):  # You can add more file types
